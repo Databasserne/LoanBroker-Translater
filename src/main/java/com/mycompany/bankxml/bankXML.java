@@ -11,32 +11,22 @@ import java.io.IOException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.ConsumerCancelledException;
-import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.DefaultConsumer;
+import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
  * @author jonassimonsen & Kasper S. Worm
  */
-public class bankXML implements Runnable {
+public class bankXML {
 
     public static String QUEUE_NAME;
-    private final static String RECEIVING_QUEUE_NAME = "cphbusiness.bankXML";
+    private final static String EXCHANGE_NAME = "cphbusiness.bankXML";
     private final static String HOST_NAME = "10.18.144.10"; //datdb.cphbusiness.dk
-
-    private static Connection conn;
-    private static Channel chan;
-    private String qu;
-
-    public bankXML(Connection connection, Channel channel, String queue) {
-        this.conn = connection;
-        this.chan = channel;
-        this.qu = queue;
-    }
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         ConnectionFactory factory = new ConnectionFactory();
@@ -44,40 +34,48 @@ public class bankXML implements Runnable {
         factory.setUsername("student");
         factory.setPassword("cph");
         Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
 
-        channel.exchangeDeclare(RECEIVING_QUEUE_NAME, "fanout");
-        String test = channel.queueDeclare().getQueue();
-        QUEUE_NAME = test;
+        Channel sendChannel = connection.createChannel();
+        sendChannel.exchangeDeclare(EXCHANGE_NAME, "fanout");
 
-        Thread t = new Thread(new bankXML(connection, channel, test));
-        t.start();
+        Channel replyChannel = connection.createChannel();
+        String replyQueue = replyChannel.queueDeclare().getQueue();
+
         //TODO - receive message from other source and call send wih that message
-        send(test);
+        receive(connection, replyChannel, replyQueue);
+        send(replyChannel, replyQueue);
     }
 
-    private static void send(String queue) throws IOException, TimeoutException {
+    /**
+     * Send a message
+     *
+     * @param chan channel to send message to
+     * @param queue replyqueue
+     * @throws IOException
+     * @throws TimeoutException
+     */
+    private static void send(Channel chan, String queue) throws IOException, TimeoutException {
+        System.out.println("***SENDING MESSAGE***");
+        String replyKey = "xmlbank";
 
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(HOST_NAME);
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
+        chan.exchangeDeclare(EXCHANGE_NAME, "fanout");
 
-        channel.exchangeDeclare(RECEIVING_QUEUE_NAME, "fanout");
-        AMQP.BasicProperties.Builder propertiesBuilder = new AMQP.BasicProperties.Builder();
-        propertiesBuilder.replyTo(queue);
-        AMQP.BasicProperties properties = propertiesBuilder.build();
+        AMQP.BasicProperties basicProperties = new AMQP.BasicProperties()
+                .builder()
+                .contentType("text/plain")
+                .deliveryMode(1)
+                .replyTo(queue)
+                .build();
 
-        String message = "<LoanRequest><ssn>12345678</ssn>"
+        String message = "<LoanRequest>"
+                + "<ssn>12345678</ssn>"
                 + "<creditScore>685</creditScore>"
-                + "<loanAmount>1000.0</loanAmount><loanDuration>1973-01-01 01:00:00.0 CET</loanDuration>"
+                + "<loanAmount>1000.0</loanAmount>"
+                + "<loanDuration>1973-01-01 01:00:00.0 CET</loanDuration>"
                 + "</LoanRequest>";
 
         System.out.println("Sent message: " + message);
-        channel.basicPublish(RECEIVING_QUEUE_NAME, "", properties, message.getBytes());
-
-        channel.close();
-        connection.close();
+        chan.basicPublish(EXCHANGE_NAME, replyKey, basicProperties, message.getBytes());
 
     }
 
@@ -88,65 +86,20 @@ public class bankXML implements Runnable {
      * @throws InterruptedException
      * @throws ConsumerCancelledException
      */
-    private static void receive(String queue, Connection connection, Channel channel) throws ShutdownSignalException, InterruptedException, ConsumerCancelledException, TimeoutException, IOException {
-        try {
-            channel.basicQos(1);
+    private static void receive(Connection conn, Channel chan, String queue) throws ShutdownSignalException, InterruptedException, ConsumerCancelledException, TimeoutException, IOException {
+        System.out.println("***DEBUG - Connection: " + conn);
+        System.out.println("***RECEIVING MESSAGES FROM BANK***");
 
-            System.out.println("***DEBUG - Connection: " + connection);
-            System.out.println("waiting for response...");
-
-            QueueingConsumer consumer = new QueueingConsumer(channel);
-            channel.basicConsume(queue, true, consumer);
-
-            //Keep listening to new messages from the bank
-            while (true) {
-
-                System.out.println("connection: " + connection);
-                System.out.println("channel   : " + channel);
-                System.out.println("while start");
-                QueueingConsumer.Delivery delivery = consumer.nextDelivery();
-
-                String message = new String(delivery.getBody());
-
-                System.out.println("Received '" + message + "'");
-                System.out.println("Done");
-
-                AMQP.BasicProperties bp = delivery.getProperties();
-
-                String reply = "testing...";
-                String replyQueue = bp.getReplyTo();
-
-                System.out.print("\tReply Message: " + reply);
-                System.out.print("\t. Replying to: " + replyQueue + "\n");
-
-                System.out.println("delivery: " + delivery);
-                channel.basicPublish("", replyQueue, bp, reply.getBytes());
-                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-
-                System.out.println("done done");
-                //TODO - Send respons to normalizer
+        // Receive the reply message
+        Consumer qc = new DefaultConsumer(chan) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                String replyMessage = new String(body);
+                System.out.println("Reply: " + replyMessage);
             }
+        };
+        chan.basicConsume(queue, false, qc);
 
-        } catch (ConsumerCancelledException | ShutdownSignalException | IOException | InterruptedException e) {
-            System.out.println("shit hit the fan");
-            System.out.println(e.getMessage());
-        } finally {
-            if (channel != null) {
-                channel.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
-        }
     }
 
-    @Override
-    public void run() {
-        System.out.println("test");
-        try {
-            receive(qu, conn, chan);
-        } catch (IOException | TimeoutException | ShutdownSignalException | InterruptedException | ConsumerCancelledException ex) {
-            Logger.getLogger(bankXML.class.getName()).log(Level.SEVERE, "Thread-run-catch", ex);
-        }
-    }
 }
