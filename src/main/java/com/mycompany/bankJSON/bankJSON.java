@@ -3,11 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.bankxml;
+package com.mycompany.bankJSON;
 
 import com.rabbitmq.client.AMQP;
-import java.io.IOException;
-
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -16,16 +14,16 @@ import com.rabbitmq.client.ConsumerCancelledException;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
+import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 /**
  *
- * @author jonassimonsen & Kasper S. Worm
+ * @author jonassimonsen
  */
-public class bankXML {
-
+public class bankJSON {
     public static String QUEUE_NAME;
-    private final static String EXCHANGE_NAME = "cphbusiness.bankXML";
+    private final static String EXCHANGE_NAME = "cphbusiness.bankJSON";
     private final static String HOST_NAME = "10.18.144.10"; //datdb.cphbusiness.dk
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
@@ -56,7 +54,7 @@ public class bankXML {
      */
     private static void send(Channel chan, String queue) throws IOException, TimeoutException {
         System.out.println("***SENDING MESSAGE***");
-        String replyKey = "xmlbank";
+        String replyKey = "jsonbank";
 
         chan.exchangeDeclare(EXCHANGE_NAME, "fanout");
 
@@ -66,13 +64,8 @@ public class bankXML {
                 .deliveryMode(1)
                 .replyTo(queue)
                 .build();
-
-        String message = "<LoanRequest>"
-                + "<ssn>12345678</ssn>"
-                + "<creditScore>685</creditScore>"
-                + "<loanAmount>1000.0</loanAmount>"
-                + "<loanDuration>1973-01-01 01:00:00.0 CET</loanDuration>"
-                + "</LoanRequest>";
+        
+        String message = "{ \"ssn\":1605789787, \"creditScore\":598, \"loanAmount\":10.0, \"loanDuration\":360}";
 
         System.out.println("Sent message: " + message);
         chan.basicPublish(EXCHANGE_NAME, replyKey, basicProperties, message.getBytes());
