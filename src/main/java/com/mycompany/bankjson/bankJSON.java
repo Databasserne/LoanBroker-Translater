@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.bankJSON;
+package com.mycompany.bankjson;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
