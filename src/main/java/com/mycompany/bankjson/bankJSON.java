@@ -60,16 +60,13 @@ public class bankJSON {
 
         AMQP.BasicProperties basicProperties = new AMQP.BasicProperties()
                 .builder()
-                //.contentType("text/plain")
-                .deliveryMode(1)
                 .replyTo(queue)
                 .build();
         
-        String message = "{ \"ssn\":1605789787, \"creditScore\":598, \"loanAmount\":10.0, \"loanDuration\":360}";
+        String message = "{\"ssn\":1605789787, \"creditScore\":598, \"loanAmount\":10.0, \"loanDuration\":360}";
 
         System.out.println("Sent message: " + message);
         chan.basicPublish(EXCHANGE_NAME, replyKey, basicProperties, message.getBytes());
-
     }
 
     /**
@@ -92,7 +89,5 @@ public class bankJSON {
             }
         };
         chan.basicConsume(queue, false, qc);
-
     }
-
 }

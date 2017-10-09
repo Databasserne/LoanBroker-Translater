@@ -62,8 +62,6 @@ public class bankXML {
 
         AMQP.BasicProperties basicProperties = new AMQP.BasicProperties()
                 .builder()
-                //.contentType("text/plain")
-                .deliveryMode(1)
                 .replyTo(queue)
                 .build();
 
@@ -76,7 +74,6 @@ public class bankXML {
 
         System.out.println("Sent message: " + message);
         chan.basicPublish(EXCHANGE_NAME, replyKey, basicProperties, message.getBytes());
-
     }
 
     /**
@@ -99,7 +96,5 @@ public class bankXML {
             }
         };
         chan.basicConsume(queue, false, qc);
-
     }
-
 }
