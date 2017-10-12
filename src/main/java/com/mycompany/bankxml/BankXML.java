@@ -27,9 +27,11 @@ import org.json.JSONObject;
 public class BankXML {
 
     public static String QUEUE_NAME;
-    private final static String EXCHANGE_NAME = "cphbusiness.bankXML";
+    private final static String SEND_NAME = "cphbusiness.bankXML";
     private final static String RECEIVE_NAME = "Databasserne_Test";
-    private final static String HOST_NAME = /* "10.18.144.10"; */ "datdb.cphbusiness.dk";
+    private final static String HOST_NAME = "5.179.80.218";
+//    private final static String HOST_NAME = "datdb.cphbusiness.dk";
+//    private final static String HOST_NAME = "10.18.144.10"; 
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         receive();
@@ -77,21 +79,21 @@ public class BankXML {
         factory.setPassword("cph");
         Connection connection = factory.newConnection();
         Channel XMLChannel = connection.createChannel();
-        String normalizerQueue = "Databasserne_Normalizer_XML";
+        String normalizerQueue = "Databasserne_Normalizer";
 
         System.out.println("\n***SENDING MESSAGE***");
         String replyKey = "xmlbank";
 
-        XMLChannel.exchangeDeclare(EXCHANGE_NAME, "fanout");
+        XMLChannel.exchangeDeclare(SEND_NAME, "fanout");
 
         AMQP.BasicProperties basicProperties = new AMQP.BasicProperties()
                 .builder()
                 .replyTo(normalizerQueue)
-                .correlationId("xml")
+                .correlationId("BankXML")
                 .build();
 
         System.out.println("Sent message: " + message);
-        XMLChannel.basicPublish(EXCHANGE_NAME, replyKey, basicProperties, message.getBytes());
+        XMLChannel.basicPublish(SEND_NAME, replyKey, basicProperties, message.getBytes());
         XMLChannel.close();
         connection.close();
     }

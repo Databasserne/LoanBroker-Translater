@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.bankjson;
+package com.mycompany.nodebank;
 
+import com.mycompany.bankjson.BankJSON;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -22,16 +23,13 @@ import org.json.JSONObject;
 
 /**
  *
- * @author jonassimonsen
+ * @author Kasper S. Worm
  */
-public class BankJSON {
-
+public class NodeBank {
     public static String QUEUE_NAME;
-    private final static String SEND_NAME = "cphbusiness.bankJSON";
+    private final static String SEND_NAME = "Databasserne_BankNODE";
     private final static String RECEIVE_NAME = "Databasserne_Test";
-//    private final static String HOST_NAME = "10.18.144.10";
-//    private final static String HOST_NAME = "datdb.cphbusiness.dk";
-    private final static String HOST_NAME = "5.179.80.218";
+    private final static String HOST_NAME = "10.18.144.10";
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         receive();
@@ -42,15 +40,15 @@ public class BankJSON {
 
         String SSN = json.getString("SSN");
         String tempSSN = SSN.replace("-", "");
-        int Months = json.getInt("Months");
-        double Amount = json.getDouble("Amount");
-        int Credit = json.getInt("CreditScore");
+        int Months = json.getInt("loanDuration");
+        double Amount = json.getDouble("loanAmount");
+        int Credit = json.getInt("creditScore");
 
-        String temp
-                = "{ \"ssn\":\"" + tempSSN + "\","
-                + "\"creditScore\":" + Credit + ","
-                + "\"loanAmount\":" + Amount + ","
-                + "\"loanDuration\":" + Months + "}";
+        String temp = "{ \"ssn\":\"" + tempSSN + "\","
+                + " \"creditScore\":" + Credit + "\","
+                + " \"loanAmount\":" + Amount + "\","
+                + " \"loanDuration\": " + Months + "\" }";
+
         return temp;
     }
 
@@ -72,14 +70,14 @@ public class BankJSON {
         String normalizerQueue = "Databasserne_Normalizer";
 
         System.out.println("\n***SENDING MESSAGE***");
-        String replyKey = "jsonbank";
+        String replyKey = "nodebank";
 
         JSONChannel.exchangeDeclare(SEND_NAME, "fanout");
 
         AMQP.BasicProperties basicProperties = new AMQP.BasicProperties()
                 .builder()
                 .replyTo(normalizerQueue)
-                .correlationId("BankJSON")
+                .correlationId("BankNode")
                 .build();
 
         System.out.println("Sent message: " + message);
@@ -107,10 +105,10 @@ public class BankJSON {
 
         Channel replyChannel = connection.createChannel();
 
-        replyChannel.queueDeclare("Databasserne_Normalizer_JSON", true, false, false, null);
+        replyChannel.queueDeclare("Databasserne_Normalizer_NODE", true, false, false, null);
         String replyQueue = replyChannel.queueDeclare().getQueue();
 
-        replyChannel.queueBind(replyQueue, RECEIVE_NAME, "BankJSON");
+        replyChannel.queueBind(replyQueue, RECEIVE_NAME, "BankNODE");
 
         System.out.println("***RECEIVING MESSAGES FROM RECIP LIST***");
 
@@ -122,10 +120,8 @@ public class BankJSON {
                 System.out.println("Received message: " + receivedMessage);
                 try {
                     send(JSONFormatter(receivedMessage));
-
                 } catch (TimeoutException ex) {
-                    Logger.getLogger(BankJSON.class
-                            .getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(BankJSON.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         };
