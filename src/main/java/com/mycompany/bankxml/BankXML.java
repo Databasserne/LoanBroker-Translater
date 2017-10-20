@@ -22,16 +22,16 @@ import org.json.JSONObject;
 
 /**
  *
- * @author jonassimonsen & Kasper S. Worm
+ * @author jonassimonsen
  */
 public class BankXML {
 
     public static String QUEUE_NAME;
     private final static String SEND_NAME = "cphbusiness.bankXML";
     private final static String RECEIVE_NAME = "Databasserne_Test";
-    private final static String HOST_NAME = "5.179.80.218";
-//    private final static String HOST_NAME = "datdb.cphbusiness.dk";
+    private final static String HOST_NAME = "datdb.cphbusiness.dk";
 //    private final static String HOST_NAME = "10.18.144.10"; 
+//   private final static String HOST_NAME = "5.179.80.218";
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         receive();

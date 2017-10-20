@@ -29,7 +29,8 @@ public class NodeBank {
     public static String QUEUE_NAME;
     private final static String SEND_NAME = "Databasserne_BankNODE";
     private final static String RECEIVE_NAME = "Databasserne_Test";
-    private final static String HOST_NAME = "10.18.144.10";
+    private final static String HOST_NAME = "datdb.cphbusiness.dk";
+//    private final static String HOST_NAME = "10.18.144.10";
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         receive();
