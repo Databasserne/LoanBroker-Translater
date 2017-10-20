@@ -71,7 +71,6 @@ public class BankJSON {
         Channel JSONChannel = connection.createChannel();
         String normalizerQueue = "Databasserne_Normalizer";
 
-        System.out.println("\n***SENDING MESSAGE***");
         String replyKey = "jsonbank";
 
         JSONChannel.exchangeDeclare(SEND_NAME, "fanout");
@@ -83,6 +82,7 @@ public class BankJSON {
                 .build();
 
         System.out.println("Sent message: " + message);
+        System.out.println("******");
         JSONChannel.basicPublish(SEND_NAME, replyKey, basicProperties, message.getBytes());
         JSONChannel.close();
         connection.close();
@@ -119,6 +119,7 @@ public class BankJSON {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                 String receivedMessage = new String(body);
+                System.out.println("\n******");
                 System.out.println("Received message: " + receivedMessage);
                 try {
                     send(JSONFormatter(receivedMessage));

@@ -81,7 +81,6 @@ public class BankXML {
         Channel XMLChannel = connection.createChannel();
         String normalizerQueue = "Databasserne_Normalizer";
 
-        System.out.println("\n***SENDING MESSAGE***");
         String replyKey = "xmlbank";
 
         XMLChannel.exchangeDeclare(SEND_NAME, "fanout");
@@ -93,6 +92,7 @@ public class BankXML {
                 .build();
 
         System.out.println("Sent message: " + message);
+        System.out.println("******");
         XMLChannel.basicPublish(SEND_NAME, replyKey, basicProperties, message.getBytes());
         XMLChannel.close();
         connection.close();
@@ -120,6 +120,7 @@ public class BankXML {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                 String receivedMessage = new String(body);
+                System.out.println("\n******");
                 System.out.println("Received message: " + receivedMessage);
                 try {
                     send(jsonToXmlConverter(receivedMessage));
